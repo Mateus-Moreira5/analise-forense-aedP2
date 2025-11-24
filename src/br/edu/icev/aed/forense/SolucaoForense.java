@@ -111,8 +111,69 @@ public class SolucaoForense implements AnaliseForenseAvancada {
 
     @Override
     public Map<Long, Long> desafio4_encontrarPicosTransferencia(String caminhoArquivo) throws IOException {
-        return new HashMap<>();
+        Map<Long, Long> resultado = new HashMap<>();
+        List<EventoTransferencia> eventos = new ArrayList<>();
+    
+        try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivo))) {
+        String linha;
+        boolean primeiraLinha = true;
+        
+        while ((linha = br.readLine()) != null) {
+            if (primeiraLinha) {
+                primeiraLinha = false;
+                continue;
+            }
+            
+            String[] campos = linha.split(",");
+            if (campos.length < 7) continue;
+            
+            try {
+                long timestamp = Long.parseLong(campos[0].trim());
+                long bytesTransferred = Long.parseLong(campos[6].trim());
+                
+                if (bytesTransferred > 0) {
+                    eventos.add(new EventoTransferencia(timestamp, bytesTransferred));
+                }
+            } catch (NumberFormatException e) {
+                continue;
+            }
+        }
     }
+    
+     eventos.sort(Comparator.comparingLong(e -> e.timestamp));
+    
+     Stack<EventoTransferencia> pilha = new Stack<>();
+    
+    for (int i = eventos.size() - 1; i >= 0; i--) {
+        EventoTransferencia eventoAtual = eventos.get(i);
+        
+        while (!pilha.isEmpty() && pilha.peek().bytesTransferred <= eventoAtual.bytesTransferred) {
+            pilha.pop();
+        }
+        
+        if (!pilha.isEmpty()) {
+            resultado.put(eventoAtual.timestamp, pilha.peek().timestamp);
+        }
+        pilha.push(eventoAtual);
+    }
+    
+        return resultado;
+        
+    }
+    private static class EventoTransferencia {
+    long timestamp;
+    long bytesTransferred;
+    
+    EventoTransferencia(long timestamp, long bytesTransferred) {
+        this.timestamp = timestamp;
+        this.bytesTransferred = bytesTransferred;
+    }
+    
+    @Override
+    public String toString() {
+        return "Evento{timestamp=" + timestamp + ", bytes=" + bytesTransferred + "}";
+    }
+}
 
     @Override
     public Optional<List<String>> desafio5_rastrearContaminacao(String caminhoArquivo, String recursoInicial,
