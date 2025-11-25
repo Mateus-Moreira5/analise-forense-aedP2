@@ -6,250 +6,269 @@ import java.io.IOException;
 import java.util.*;
 
 public class SolucaoForense implements AnaliseForenseAvancada {
-    public SolucaoForense() {
-    }
-
+    
+    public SolucaoForense() {}
+    
+    // ========== DESAFIO 1: Sessões Inválidas (JÁ OTIMIZADO) ==========
     @Override
     public Set<String> desafio1_encontrarSessoesInvalidas(String caminhoArquivoCsv) throws IOException {
         Set<String> sessoesInvalidas = new HashSet<>();
-        Map<String, Stack<String>> pilhaSessoes = new HashMap<>();
+        Map<String, Stack<String>> pilhasUsuarios = new HashMap<>();
+        
         try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivoCsv))) {
-            String linha;
-            boolean primeiraLinha = true;
-
+            String linha = br.readLine(); // Pula cabeçalho
+            
             while ((linha = br.readLine()) != null) {
-                if (primeiraLinha) {
-                    primeiraLinha = false;
-                    continue;
-                }
                 String[] campos = linha.split(",");
-                if (campos.length < 4)
-                    continue;
-
-                String userID = campos[1].trim();
-                String sessionID = campos[2].trim();
+                if (campos.length < 4) continue;
+                
+                String userId = campos[1].trim();
+                String sessionId = campos[2].trim();
                 String actionType = campos[3].trim();
-                if (!pilhaSessoes.containsKey(userID)) {
-                    pilhaSessoes.put(userID, new Stack<>());
+                
+                if (!pilhasUsuarios.containsKey(userId)) {
+                    pilhasUsuarios.put(userId, new Stack<>());
                 }
-                Stack<String> pilhaUsuario = pilhaSessoes.get(userID);
+                
+                Stack<String> pilha = pilhasUsuarios.get(userId);
+                
                 if ("LOGIN".equals(actionType)) {
-                    if (!pilhaUsuario.isEmpty()) {
-                        sessoesInvalidas.add(pilhaUsuario.peek());
+                    if (!pilha.isEmpty()) {
+                        sessoesInvalidas.add(pilha.peek());
                     }
-                    pilhaUsuario.push(sessionID);
+                    pilha.push(sessionId);
                 } else if ("LOGOUT".equals(actionType)) {
-                    if (pilhaUsuario.isEmpty()) {
-                        sessoesInvalidas.add(sessionID);
-                    } else if (!pilhaUsuario.peek().equals(sessionID)) {
-                        sessoesInvalidas.add(pilhaUsuario.peek());
-                        sessoesInvalidas.add(sessionID);
+                    if (pilha.isEmpty() || !pilha.peek().equals(sessionId)) {
+                        sessoesInvalidas.add(sessionId);
                     } else {
-                        pilhaUsuario.pop();
+                        pilha.pop();
                     }
                 }
             }
         }
-        for (Stack<String> pilha : pilhaSessoes.values()) {
+        
+        // Sessões não finalizadas
+        for (Stack<String> pilha : pilhasUsuarios.values()) {
             sessoesInvalidas.addAll(pilha);
         }
+        
         return sessoesInvalidas;
     }
-
+    
+    // ========== DESAFIO 2: Reconstruir Timeline (JÁ OTIMIZADO) ==========
     @Override
     public List<String> desafio2_reconstruirLinhaTempo(String caminhoArquivoCsv, String sessionId) throws IOException {
-        Queue<String> acoesNaSessao = new LinkedList<>();
+        List<String> timeline = new ArrayList<>();
+        
         try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivoCsv))) {
-            String linha;
+            String linha = br.readLine(); // Pula cabeçalho
+            
             while ((linha = br.readLine()) != null) {
-                String[] colunas = linha.split(",", -1);
-                if (colunas.length < 7) continue;
-
-                String currentSessionId = colunas[2].trim();
-                String actionType = colunas[3].trim();
-
+                String[] campos = linha.split(",", -1);
+                if (campos.length < 4) continue;
+                
+                String currentSessionId = campos[2].trim();
+                String actionType = campos[3].trim();
+                
                 if (currentSessionId.equals(sessionId)) {
-                    acoesNaSessao.offer(actionType);
+                    timeline.add(actionType);
                 }
             }
-        } catch (IOException e) {
-            throw new IOException("Erro ao ler o arquivo de logs");
         }
-        List<String> linhaDoTempo = new LinkedList<>();
-        while (!acoesNaSessao.isEmpty()) {
-            linhaDoTempo.add(acoesNaSessao.poll());
-        }
-        return linhaDoTempo;
+        
+        return timeline;
     }
-
+    
+    // ========== DESAFIO 3: Priorizar Alertas (VERSÃO SUPER OTIMIZADA) ==========
     @Override
-    public List<Alerta> desafio3_priorizarAlertas(String caminhoArquivoCsv, int tamanhoCiclo) throws IOException {
-        PriorityQueue<Alerta> alertaPriority = new PriorityQueue<>();
+    public List<Alerta> desafio3_priorizarAlertas(String caminhoArquivoCsv, int n) throws IOException {
+        // 🚀 OTIMIZAÇÃO: Min-Heap com capacidade fixa para O(N log K) em vez de O(N log N)
+        if (n <= 0) return new ArrayList<>();
+        
+        PriorityQueue<Alerta> minHeap = new PriorityQueue<>(n + 1, 
+            Comparator.comparingInt(Alerta::getSeverityLevel)
+        );
+        
         try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivoCsv))) {
-            String linha;
-
+            String linha = br.readLine(); // Pula cabeçalho
+            
             while ((linha = br.readLine()) != null) {
-                String[] colunas = linha.split(",", -1);
-                if (colunas.length < 6) continue;
-
-                int timestamp = Integer.parseInt(colunas[0].trim());
-                String actionType = colunas[3].trim();
-                int severityLevel = Integer.parseInt(colunas[5].trim());
-                alertaPriority.offer(new Alerta(timestamp, actionType, severityLevel));
+                String[] campos = linha.split(",", -1);
+                if (campos.length < 7) continue;
+                
+                try {
+                    long timestamp = Long.parseLong(campos[0].trim());
+                    String userId = campos[1].trim();
+                    String sessionId = campos[2].trim();
+                    String actionType = campos[3].trim();
+                    String targetResource = campos[4].trim();
+                    int severityLevel = Integer.parseInt(campos[5].trim());
+                    long bytesTransferred = Long.parseLong(campos[6].trim());
+                    
+                    Alerta alerta = new Alerta(
+                        timestamp, userId, sessionId, actionType, 
+                        targetResource, severityLevel, bytesTransferred
+                    );
+                    
+                    minHeap.offer(alerta);
+                    
+                    // 🚀 Mantém apenas os N maiores elementos
+                    if (minHeap.size() > n) {
+                        minHeap.poll(); // Remove o menor
+                    }
+                } catch (NumberFormatException e) {
+                    continue;
+                }
             }
-        } catch (IOException e) {
-            throw new IOException("Erro ao ler o arquivo de logs");
         }
-        List<Alerta> topAlertas = new LinkedList<>();
-        int contador = 0;
-        while (contador < tamanhoCiclo && !alertaPriority.isEmpty()) {
-            topAlertas.add(alertaPriority.poll());
-            contador++;
-        }
-        return topAlertas;
+        
+        // 🚀 Converte para lista ordenada (maior para menor)
+        List<Alerta> resultado = new ArrayList<>(minHeap);
+        resultado.sort((a1, a2) -> 
+            Integer.compare(a2.getSeverityLevel(), a1.getSeverityLevel())
+        );
+        
+        return resultado;
     }
-
+    
+    // ========== DESAFIO 4: Picos de Transferência (JÁ OTIMIZADO) ==========
     @Override
     public Map<Long, Long> desafio4_encontrarPicosTransferencia(String caminhoArquivo) throws IOException {
         Map<Long, Long> resultado = new HashMap<>();
-        List<EventoTransferencia> eventos = new ArrayList<>();
-    
+        List<long[]> eventos = new ArrayList<>(); // 🚀 Usando array primitivo para melhor performance
+        
         try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivo))) {
-        String linha;
-        boolean primeiraLinha = true;
-        
-        while ((linha = br.readLine()) != null) {
-            if (primeiraLinha) {
-                primeiraLinha = false;
-                continue;
-            }
+            String linha = br.readLine(); // Pula cabeçalho
             
-            String[] campos = linha.split(",");
-            if (campos.length < 7) continue;
-            
-            try {
-                long timestamp = Long.parseLong(campos[0].trim());
-                long bytesTransferred = Long.parseLong(campos[6].trim());
-                
-                if (bytesTransferred > 0) {
-                    eventos.add(new EventoTransferencia(timestamp, bytesTransferred));
-                }
-            } catch (NumberFormatException e) {
-                continue;
-            }
-        }
-    }
-    
-     eventos.sort(Comparator.comparingLong(e -> e.timestamp));
-    
-     Stack<EventoTransferencia> pilha = new Stack<>();
-    
-    for (int i = eventos.size() - 1; i >= 0; i--) {
-        EventoTransferencia eventoAtual = eventos.get(i);
-        
-        while (!pilha.isEmpty() && pilha.peek().bytesTransferred <= eventoAtual.bytesTransferred) {
-            pilha.pop();
-        }
-        
-        if (!pilha.isEmpty()) {
-            resultado.put(eventoAtual.timestamp, pilha.peek().timestamp);
-        }
-        pilha.push(eventoAtual);
-    }
-    
-        return resultado;
-        
-    }
-    private static class EventoTransferencia {
-    long timestamp;
-    long bytesTransferred;
-    
-    EventoTransferencia(long timestamp, long bytesTransferred) {
-        this.timestamp = timestamp;
-        this.bytesTransferred = bytesTransferred;
-    }
-    
-    @Override
-    public String toString() {
-        return "Evento{timestamp=" + timestamp + ", bytes=" + bytesTransferred + "}";
-    }
-}
-
-    @Override
-    public Optional<List<String>> desafio5_rastrearContaminacao(String caminhoArquivo, String recursoInicial,
-            String recursoAlvo) throws IOException {
-        if (recursoInicial.equals(recursoAlvo)) {
-            return Optional.of(Arrays.asList(recursoInicial));
-        }
-
-        Map<String, List<String>> grafo = new HashMap<>();
-        Map<String, List<String>> sessoes = new HashMap<>();
-
-        try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivo))) {
-            String linha;
-            br.readLine();
-
             while ((linha = br.readLine()) != null) {
                 String[] campos = linha.split(",");
-                if (campos.length < 5)
+                if (campos.length < 7) continue;
+                
+                try {
+                    long timestamp = Long.parseLong(campos[0].trim());
+                    long bytes = Long.parseLong(campos[6].trim());
+                    
+                    if (bytes > 0) {
+                        eventos.add(new long[]{timestamp, bytes});
+                    }
+                } catch (NumberFormatException e) {
                     continue;
-
+                }
+            }
+        }
+        
+        // 🚀 Ordenação mais eficiente com arrays primitivos
+        eventos.sort(Comparator.comparingLong(a -> a[0]));
+        
+        // Pilha monotônica otimizada
+        Stack<Integer> pilha = new Stack<>();
+        
+        for (int i = eventos.size() - 1; i >= 0; i--) {
+            long bytesAtual = eventos.get(i)[1];
+            
+            while (!pilha.isEmpty() && eventos.get(pilha.peek())[1] <= bytesAtual) {
+                pilha.pop();
+            }
+            
+            if (!pilha.isEmpty()) {
+                resultado.put(eventos.get(i)[0], eventos.get(pilha.peek())[0]);
+            }
+            
+            pilha.push(i);
+        }
+        
+        return resultado;
+    }
+    
+    // ========== DESAFIO 5: Rastrear Contaminação (OTIMIZADO) ==========
+    @Override
+    public Optional<List<String>> desafio5_rastrearContaminacao(String caminhoArquivo, 
+                                                               String recursoInicial, 
+                                                               String recursoAlvo) throws IOException {
+        // 🚀 Caso especial otimizado
+        if (recursoInicial.equals(recursoAlvo)) {
+            return Optional.of(Collections.singletonList(recursoInicial));
+        }
+        
+        // 🚀 Constrói grafo de forma mais eficiente (streaming)
+        Map<String, Set<String>> grafo = new HashMap<>();
+        String currentSession = null;
+        String lastResource = null;
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivo))) {
+            String linha = br.readLine(); // Pula cabeçalho
+            
+            while ((linha = br.readLine()) != null) {
+                String[] campos = linha.split(",");
+                if (campos.length < 5) continue;
+                
                 String sessionId = campos[2].trim();
                 String recurso = campos[4].trim();
-
-                sessoes.computeIfAbsent(sessionId, k -> new ArrayList<>()).add(recurso);
-            }
-        }
-
-        // ✅ CORREÇÃO: Ordenar sessões para garantir ordem consistente
-        List<String> sessoesOrdenadas = new ArrayList<>(sessoes.keySet());
-        Collections.sort(sessoesOrdenadas);
-
-        for (String sessionId : sessoesOrdenadas) {
-            List<String> recursos = sessoes.get(sessionId);
-            for (int i = 0; i < recursos.size() - 1; i++) {
-                String from = recursos.get(i);
-                String to = recursos.get(i + 1);
-
-                if (!from.equals(to)) {
-                    grafo.computeIfAbsent(from, k -> new ArrayList<>()).add(to);
+                
+                // 🚀 Constrói grafo em tempo real sem armazenar todas as sessões
+                if (currentSession == null || !currentSession.equals(sessionId)) {
+                    currentSession = sessionId;
+                    lastResource = null;
                 }
+                
+                if (lastResource != null && !lastResource.equals(recurso)) {
+                    grafo.computeIfAbsent(lastResource, k -> new HashSet<>()).add(recurso);
+                }
+                
+                lastResource = recurso;
             }
         }
-
-        Map<String, String> anterior = new HashMap<>();
+        
+        // 🚀 BFS otimizado com inicialização mais eficiente
+        return encontrarCaminhoBFS(grafo, recursoInicial, recursoAlvo);
+    }
+    
+    // 🚀 Método auxiliar otimizado para BFS
+    private Optional<List<String>> encontrarCaminhoBFS(Map<String, Set<String>> grafo, 
+                                                      String inicio, String alvo) {
+        if (!grafo.containsKey(inicio) && !inicio.equals(alvo)) {
+            return Optional.empty();
+        }
+        
+        Map<String, String> predecessor = new HashMap<>();
         Queue<String> fila = new LinkedList<>();
-        Set<String> visitado = new HashSet<>();
-
-        fila.add(recursoInicial);
-        visitado.add(recursoInicial);
-        anterior.put(recursoInicial, null);
-
+        Set<String> visitados = new HashSet<>();
+        
+        fila.offer(inicio);
+        visitados.add(inicio);
+        predecessor.put(inicio, null);
+        
         while (!fila.isEmpty()) {
             String atual = fila.poll();
-
-            if (atual.equals(recursoAlvo)) {
-                List<String> caminho = new ArrayList<>();
-                while (atual != null) {
-                    caminho.add(atual);
-                    atual = anterior.get(atual);
-                }
-                Collections.reverse(caminho);
-                return Optional.of(caminho);
+            
+            if (atual.equals(alvo)) {
+                return Optional.of(reconstruirCaminho(predecessor, alvo));
             }
-
-            List<String> vizinhos = grafo.get(atual);
+            
+            Set<String> vizinhos = grafo.get(atual);
             if (vizinhos != null) {
                 for (String vizinho : vizinhos) {
-                    if (!visitado.contains(vizinho)) {
-                        visitado.add(vizinho);
-                        anterior.put(vizinho, atual);
-                        fila.add(vizinho);
+                    if (visitados.add(vizinho)) { // 🚀 add() retorna true se não estava presente
+                        predecessor.put(vizinho, atual);
+                        fila.offer(vizinho);
                     }
                 }
             }
         }
-
+        
         return Optional.empty();
+    }
+    
+    // 🚀 Reconstrução de caminho otimizada
+    private List<String> reconstruirCaminho(Map<String, String> predecessor, String alvo) {
+        LinkedList<String> caminho = new LinkedList<>();
+        String no = alvo;
+        
+        while (no != null) {
+            caminho.addFirst(no); // 🚀 Mais eficiente que reverse()
+            no = predecessor.get(no);
+        }
+        
+        return new ArrayList<>(caminho);
     }
 }
