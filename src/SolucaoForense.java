@@ -1,5 +1,5 @@
-package br.edu.icev.aed.forense;
 
+import br.edu.icev.aed.forense.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -11,7 +11,7 @@ public class SolucaoForense implements AnaliseForenseAvancada {
     
     // ========== DESAFIO 1: Sessões Inválidas (JÁ OTIMIZADO) ==========
     @Override
-    public Set<String> desafio1_encontrarSessoesInvalidas(String caminhoArquivoCsv) throws IOException {
+    public Set<String> encontrarSessoesInvalidas(String caminhoArquivoCsv) throws IOException {
         Set<String> sessoesInvalidas = new HashSet<>();
         Map<String, Stack<String>> pilhasUsuarios = new HashMap<>();
         
@@ -57,7 +57,7 @@ public class SolucaoForense implements AnaliseForenseAvancada {
     
     // ========== DESAFIO 2: Reconstruir Timeline (JÁ OTIMIZADO) ==========
     @Override
-    public List<String> desafio2_reconstruirLinhaTempo(String caminhoArquivoCsv, String sessionId) throws IOException {
+    public List<String> reconstruirLinhaTempo(String caminhoArquivoCsv, String sessionId) throws IOException {
         List<String> timeline = new ArrayList<>();
         
         try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivoCsv))) {
@@ -81,7 +81,7 @@ public class SolucaoForense implements AnaliseForenseAvancada {
     
     // ========== DESAFIO 3: Priorizar Alertas (VERSÃO SUPER OTIMIZADA) ==========
     @Override
-    public List<Alerta> desafio3_priorizarAlertas(String caminhoArquivoCsv, int n) throws IOException {
+    public List<Alerta> priorizarAlertas(String caminhoArquivoCsv, int n) throws IOException {
         // 🚀 OTIMIZAÇÃO: Min-Heap com capacidade fixa para O(N log K) em vez de O(N log N)
         if (n <= 0) return new ArrayList<>();
         
@@ -133,7 +133,7 @@ public class SolucaoForense implements AnaliseForenseAvancada {
     
     // ========== DESAFIO 4: Picos de Transferência (JÁ OTIMIZADO) ==========
     @Override
-    public Map<Long, Long> desafio4_encontrarPicosTransferencia(String caminhoArquivo) throws IOException {
+    public Map<Long, Long> encontrarPicosTransferencia(String caminhoArquivo) throws IOException {
         Map<Long, Long> resultado = new HashMap<>();
         List<long[]> eventos = new ArrayList<>(); // 🚀 Usando array primitivo para melhor performance
         
@@ -182,7 +182,7 @@ public class SolucaoForense implements AnaliseForenseAvancada {
     
     // ========== DESAFIO 5: Rastrear Contaminação (OTIMIZADO) ==========
     @Override
-    public Optional<List<String>> desafio5_rastrearContaminacao(String caminhoArquivo, 
+    public Optional<List<String>> rastrearContaminacao(String caminhoArquivo, 
                                                                String recursoInicial, 
                                                                String recursoAlvo) throws IOException {
         // 🚀 Caso especial otimizado
